@@ -21,14 +21,16 @@ protocol RouteViewModelProtocol {
 
 final class RouteViewModel: RouteViewModelProtocol {
     
-    var fromCity: City?
-    var toCity: City?
-    
     private let routeFinder: RouteFinding
+    private let connectionsService: ConnectionsFetching
+    
     private var citiesSubject = CurrentValueSubject<[City], Never>([])
     private var routeSubject = CurrentValueSubject<Route?, Never>(nil)
     private var errorMessageSubject = CurrentValueSubject<String?, Never>(nil)
 
+    var fromCity: City?
+    var toCity: City?
+    
     var allCitiesPublisher: AnyPublisher<[City], Never> {
         citiesSubject.eraseToAnyPublisher()
     }
@@ -40,14 +42,25 @@ final class RouteViewModel: RouteViewModelProtocol {
     var errorMessagePublisher: AnyPublisher<String?, Never> {
         errorMessageSubject.eraseToAnyPublisher()
     }
+    
+    func setInitialError(_ message: String) {
+        errorMessageSubject.send(message)
+    }
 
-    init(routeFinder: RouteFinding) {
+    init(routeFinder: RouteFinding, connectionsService: ConnectionsFetching) {
         self.routeFinder = routeFinder
+        self.connectionsService = connectionsService
     }
 
     func loadCities() {
-        routeFinder.fetchAllCities { [weak self] cities in
-            self?.citiesSubject.send(cities)
+        connectionsService.fetchConnections { [weak self] result in
+            switch result {
+            case .success(let connections):
+                let finder = RouteFinder(connections: connections)
+                self?.citiesSubject.send(finder.allCities)
+            case .failure(let error):
+                self?.errorMessageSubject.send(error.localizedDescription)
+            }
         }
     }
 

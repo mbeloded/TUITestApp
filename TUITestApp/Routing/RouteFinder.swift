@@ -19,11 +19,14 @@ final class RouteFinder: RouteFinding {
             graph[connection.from, default: []].append(connection)
         }
     }
+    
+    var allCities: [City] {
+        let allNames = Set(graph.keys + graph.values.flatMap { $0.map { $0.to } })
+        return allNames.map { City(name: $0) }
+    }
 
     func fetchAllCities(completion: @escaping ([City]) -> Void) {
-        let cityNames = Set(graph.keys + graph.values.flatMap { $0.map { $0.to } })
-        let cities = cityNames.map { City(name: $0) }
-        completion(cities)
+        completion(allCities)
     }
 
     func findCheapestRoute(from: City, to: City) -> Route? {
