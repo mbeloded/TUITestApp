@@ -6,6 +6,6 @@
 //
 
 protocol RouteFinding {
-    func fetchCities() -> [City]
-    func findRoute(from: City, to: City) -> Route?
+    func fetchAllCities(completion: @escaping ([City]) -> Void)
+    func findCheapestRoute(from: City, to: City) -> Route?
 }

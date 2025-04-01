@@ -8,14 +8,15 @@
 @testable import TUITestApp
 
 final class MockRouteFinder: RouteFinding {
+
     var mockCities: [City] = []
     var mockRoute: Route?
 
-    func fetchCities() -> [City] {
-        return mockCities
+    func fetchAllCities(completion: @escaping ([City]) -> Void) {
+        completion(mockCities)
     }
 
-    func findRoute(from: City, to: City) -> Route? {
+    func findCheapestRoute(from: City, to: City) -> Route? {
         return mockRoute
     }
 }

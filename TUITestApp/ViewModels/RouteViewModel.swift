@@ -39,16 +39,23 @@ final class RouteViewModel: RouteViewModelProtocol {
     }
 
     func loadCities() {
-        // Hardcoded or mocked city list for now (in real app: use a CitiesFetching dependency)
-        let mockCities = [
-            City(name: "Berlin"),
-            City(name: "Paris"),
-            City(name: "Rome")
-        ]
-        citiesSubject.send(mockCities)
+        routeFinder.fetchAllCities { [weak self] cities in
+            self?.citiesSubject.send(cities)
+        }
     }
 
     func findRoute() {
-        // This will be implemented later in another test step
+        guard let from = citiesSubject.value.first,
+              let to = citiesSubject.value.last else {
+            errorMessageSubject.send("Invalid cities")
+            return
+        }
+
+        do {
+            let route = try routeFinder.findCheapestRoute(from: from, to: to)
+            routeSubject.send(route)
+        } catch {
+            errorMessageSubject.send("Failed to find route")
+        }
     }
 }
