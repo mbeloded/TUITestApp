@@ -49,12 +49,16 @@ final class RouteViewModel: RouteViewModelProtocol {
     }
 
     func findRoute() {
-        guard let from = fromCity, let to = toCity else {
+        guard let from = fromCity,
+              let to = toCity else {
             errorMessageSubject.send("Invalid cities")
             return
         }
 
-        let route = routeFinder.findCheapestRoute(from: from, to: to)
-        routeSubject.send(route)
+        if let route = routeFinder.findCheapestRoute(from: from, to: to) {
+            routeSubject.send(route)
+        } else {
+            errorMessageSubject.send("Failed to find route")
+        }
     }
 }
