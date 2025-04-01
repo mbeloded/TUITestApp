@@ -33,4 +33,42 @@ final class RouteViewModelTests: XCTestCase {
         XCTAssertEqual(receivedCities.map(\.name), ["Berlin", "Paris"])
         cancellable.cancel()
     }
+    
+    func test_findRoute_shouldReturnCorrectRoute() {
+        // Given
+        let mockRouteFinder = MockRouteFinder()
+        let viewModel = RouteViewModel(routeFinder: mockRouteFinder)
+
+        let berlin = City(name: "Berlin")
+        let paris = City(name: "Paris")
+        let expectedRoute = Route(connections: [
+            Connection(
+                from: berlin.name,
+                to: paris.name,
+                coordinates: .init(from: .init(lat: 0, long: 0), to: .init(lat: 1, long: 1)),
+                price: 100)
+        ])
+
+        mockRouteFinder.mockRoute = expectedRoute
+        viewModel.fromCity = berlin
+        viewModel.toCity = paris
+
+        let expectation = XCTestExpectation(description: "Route should be published")
+        var receivedRoute: Route?
+
+        let cancellable = viewModel.routePublisher
+            .sink { route in
+                receivedRoute = route
+                expectation.fulfill()
+            }
+
+        // When
+        viewModel.findRoute()
+
+        // Then
+        wait(for: [expectation], timeout: 1.0)
+        XCTAssertEqual(receivedRoute, expectedRoute)
+        cancellable.cancel()
+    }
+
 }

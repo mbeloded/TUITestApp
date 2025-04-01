@@ -17,6 +17,10 @@ protocol RouteViewModelProtocol {
 }
 
 final class RouteViewModel: RouteViewModelProtocol {
+    
+    var fromCity: City?
+    var toCity: City?
+    
     private let routeFinder: RouteFinding
     private var citiesSubject = CurrentValueSubject<[City], Never>([])
     private var routeSubject = CurrentValueSubject<Route?, Never>(nil)
@@ -45,17 +49,12 @@ final class RouteViewModel: RouteViewModelProtocol {
     }
 
     func findRoute() {
-        guard let from = citiesSubject.value.first,
-              let to = citiesSubject.value.last else {
+        guard let from = fromCity, let to = toCity else {
             errorMessageSubject.send("Invalid cities")
             return
         }
 
-        do {
-            let route = try routeFinder.findCheapestRoute(from: from, to: to)
-            routeSubject.send(route)
-        } catch {
-            errorMessageSubject.send("Failed to find route")
-        }
+        let route = routeFinder.findCheapestRoute(from: from, to: to)
+        routeSubject.send(route)
     }
 }

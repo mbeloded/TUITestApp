@@ -6,7 +6,7 @@
 //
 import Foundation
 
-struct Route {
+struct Route: Equatable {
     let connections: [Connection]
     var totalPrice: Int {
         connections.reduce(0) { $0 + $1.price }
