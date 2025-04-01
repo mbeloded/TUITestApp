@@ -139,34 +139,31 @@ extension MainViewController {
 
     private func bindViewModel() {
         viewModel.allCitiesPublisher
-            .sink { [weak self] cities in
-                self?.cities = cities
-            }
+            .sink { [weak self] in self?.cities = $0 }
             .store(in: &subscriptions)
 
         viewModel.routePublisher
-            .sink { [weak self] route in
-                self?.updateUIWithRoute(route)
-            }
+            .sink { [weak self] in self?.updateUIWithRoute($0) }
             .store(in: &subscriptions)
 
         viewModel.errorMessagePublisher
-            .sink { [weak self] message in
-                if let message = message {
-                    self?.showRetryAlert(error: message)
-                    self?.mapView.removeOverlays(self?.mapView.overlays ?? [])
-                }
+            .sink { [weak self] in
+                guard let message = $0 else { return }
+                self?.showRetryAlert(error: message)
+                self?.mapView.removeOverlays(self?.mapView.overlays ?? [])
             }
             .store(in: &subscriptions)
     }
 
     private func updateUIWithRoute(_ route: Route?) {
-        guard let route = route else { return }
+        guard let route else { return }
         resultLabel.text = "Total Price: \(route.totalPrice) €"
 
         mapView.removeOverlays(mapView.overlays)
 
-        let coordinates = route.connections.map { $0.coordinates.from.coordinate } + [route.connections.last!.coordinates.to.coordinate]
+        let coordinates = route.connections.map(\.coordinates.from.coordinate) +
+                          [route.connections.last!.coordinates.to.coordinate]
+
         let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
         mapView.addOverlay(polyline)
         mapView.setVisibleMapRect(polyline.boundingMapRect, edgePadding: .init(top: 20, left: 20, bottom: 20, right: 20), animated: true)
@@ -195,6 +192,9 @@ extension MainViewController {
 extension MainViewController: UITextFieldDelegate {
     func textFieldDidBeginEditing(_ textField: UITextField) {
         activeTextField = textField
+        filteredCities = cities
+        suggestionsTableView.reloadData()
+        suggestionsContainer.isHidden = filteredCities.isEmpty
     }
 
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
@@ -207,8 +207,9 @@ extension MainViewController: UITextFieldDelegate {
         activeTextField = textField
 
         guard let text = textField.text?.lowercased(), !text.isEmpty else {
-            filteredCities = []
-            suggestionsContainer.isHidden = true
+            filteredCities = cities
+            suggestionsTableView.reloadData()
+            suggestionsContainer.isHidden = cities.isEmpty
             return
         }
 

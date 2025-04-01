@@ -5,39 +5,76 @@
 //  Created by Michael Bielodied on 01.04.2025.
 //
 import XCTest
+import Combine
 @testable import TUITestApp
 
 final class RouteViewModelTests: XCTestCase {
-    func test_whenCitiesAreSet_shouldExposeThemViaPublisher() {
+    private final class MockConnectionsService: ConnectionsFetching {
+        var mockConnections: [Connection] = []
+
+        func fetchConnections(completion: @escaping @Sendable (Result<[Connection], Error>) -> Void) {
+            completion(.success(mockConnections))
+        }
+    }
+
+    private final class MockRouteFinder: RouteFinding {
+        var mockRoute: Route?
+        var mockCities: [City] = []
+
+        var allCities: [City] {
+            mockCities
+        }
+
+        func fetchAllCities(completion: @escaping ([City]) -> Void) {
+            completion(mockCities)
+        }
+
+        func findCheapestRoute(from: City, to: City) -> Route? {
+            mockRoute
+        }
+    }
+
+    private var cancellables = Set<AnyCancellable>()
+
+    @MainActor
+    func test_whenCitiesAreSet_shouldExposeThemViaPublisher() async {
         let mockRouteFinder = MockRouteFinder()
-        let viewModel = RouteViewModel(routeFinder: mockRouteFinder)
+        let mockService = MockConnectionsService()
 
-        let expectation = XCTestExpectation(description: "Should receive all cities")
-        var receivedCities: [City] = []
-
-        let cancellable = viewModel.allCitiesPublisher
-            .sink { cities in
-                receivedCities = cities
-                expectation.fulfill()
-            }
-
+        mockService.mockConnections = [
+            Connection(from: "Berlin", to: "Paris", coordinates: .init(from: .init(lat: 0, long: 0), to: .init(lat: 1, long: 1)), price: 100)
+        ]
         mockRouteFinder.mockCities = [
             City(name: "Berlin"),
             City(name: "Paris")
         ]
 
-        viewModel.loadCities()
+        let viewModel = RouteViewModel(routeFinder: mockRouteFinder, connectionsService: mockService)
 
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertEqual(receivedCities.count, 2)
-        XCTAssertEqual(receivedCities.map(\.name), ["Berlin", "Paris"])
-        cancellable.cancel()
+        let expectation = XCTestExpectation(description: "Receive cities")
+        var received: [City] = []
+
+        viewModel.allCitiesPublisher
+            .dropFirst() // wait for new value
+            .sink { cities in
+                received = cities
+                expectation.fulfill()
+            }
+            .store(in: &cancellables)
+
+        viewModel.loadCities()
+        await fulfillment(of: [expectation], timeout: 1.0)
+
+        XCTAssertEqual(received.count, 2)
+        XCTAssertEqual(received.map(\.name), ["Berlin", "Paris"])
     }
-    
-    func test_findRoute_shouldReturnCorrectRoute() {
-        // Given
+
+    @MainActor
+    func test_findRoute_shouldReturnCorrectRoute() async {
         let mockRouteFinder = MockRouteFinder()
-        let viewModel = RouteViewModel(routeFinder: mockRouteFinder)
+        let mockService = MockConnectionsService()
+
+        let viewModel = RouteViewModel(routeFinder: mockRouteFinder, connectionsService: mockService)
 
         let berlin = City(name: "Berlin")
         let paris = City(name: "Paris")
@@ -46,59 +83,59 @@ final class RouteViewModelTests: XCTestCase {
                 from: berlin.name,
                 to: paris.name,
                 coordinates: .init(from: .init(lat: 0, long: 0), to: .init(lat: 1, long: 1)),
-                price: 100)
+                price: 100
+            )
         ])
 
         mockRouteFinder.mockRoute = expectedRoute
         viewModel.fromCity = berlin
         viewModel.toCity = paris
 
-        let expectation = XCTestExpectation(description: "Route should be published")
-        var receivedRoute: Route?
+        let expectation = XCTestExpectation(description: "Route published")
+        var result: Route?
 
-        let cancellable = viewModel.routePublisher
-            .sink { route in
-                receivedRoute = route
+        viewModel.routePublisher
+            .dropFirst()
+            .sink {
+                result = $0
                 expectation.fulfill()
             }
+            .store(in: &cancellables)
 
-        // When
         viewModel.findRoute()
+        await fulfillment(of: [expectation], timeout: 1.0)
 
-        // Then
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertEqual(receivedRoute, expectedRoute)
-        cancellable.cancel()
+        XCTAssertEqual(result, expectedRoute)
     }
 
-    func test_findRoute_shouldPublishError_whenNoRouteFound() {
-        // Given
+    @MainActor
+    func test_findRoute_shouldPublishError_whenNoRouteFound() async {
         let mockRouteFinder = MockRouteFinder()
-        let viewModel = RouteViewModel(routeFinder: mockRouteFinder)
+        let mockService = MockConnectionsService()
+
+        let viewModel = RouteViewModel(routeFinder: mockRouteFinder, connectionsService: mockService)
 
         let berlin = City(name: "Berlin")
         let rome = City(name: "Rome")
 
-        mockRouteFinder.mockRoute = nil // Simulate no route
+        mockRouteFinder.mockRoute = nil
         viewModel.fromCity = berlin
         viewModel.toCity = rome
 
-        let expectation = XCTestExpectation(description: "Error message should be published")
-        var receivedError: String?
+        let expectation = XCTestExpectation(description: "Error published")
+        var message: String?
 
-        let cancellable = viewModel.errorMessagePublisher
-            .sink { error in
-                receivedError = error
+        viewModel.errorMessagePublisher
+            .dropFirst()
+            .sink {
+                message = $0
                 expectation.fulfill()
             }
+            .store(in: &cancellables)
 
-        // When
         viewModel.findRoute()
+        await fulfillment(of: [expectation], timeout: 1.0)
 
-        // Then
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertEqual(receivedError, "Failed to find route")
-        cancellable.cancel()
+        XCTAssertEqual(message, "Failed to find route")
     }
-
 }

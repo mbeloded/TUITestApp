@@ -13,10 +13,10 @@ enum ConnectionsServiceError: Error {
 }
 
 protocol ConnectionsFetching {
-    func fetchConnections(completion: @escaping (Result<[Connection], Error>) -> Void)
+    func fetchConnections(completion: @escaping @Sendable (Result<[Connection], Error>) -> Void)
 }
 
-class ConnectionsService: ConnectionsFetching {
+final class ConnectionsService: ConnectionsFetching, @unchecked Sendable {
     private let url: URL?
 
     init() {
@@ -27,27 +27,26 @@ class ConnectionsService: ConnectionsFetching {
         }
     }
 
-    func fetchConnections(completion: @escaping (Result<[Connection], Error>) -> Void) {
-        guard let url = self.url else {
+    func fetchConnections(completion: @escaping @Sendable (Result<[Connection], Error>) -> Void) {
+        guard let url else {
             completion(.failure(ConnectionsServiceError.missingURL))
             return
         }
 
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let error = error {
+        URLSession.shared.dataTask(with: url) { [completion] data, _, error in
+            if let error {
                 completion(.failure(error))
                 return
             }
 
-            guard let data = data else {
+            guard let data else {
                 completion(.failure(ConnectionsServiceError.invalidData))
                 return
             }
 
             do {
                 let response = try JSONDecoder().decode(ConnectionsResponse.self, from: data)
-                let connections = response.connections
-                completion(.success(connections))
+                completion(.success(response.connections))
             } catch {
                 completion(.failure(error))
             }

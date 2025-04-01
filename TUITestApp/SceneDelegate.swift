@@ -7,17 +7,22 @@
 
 import UIKit
 
+import UIKit
+
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
 
-    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+    func scene(_ scene: UIScene,
+               willConnectTo session: UISceneSession,
+               options connectionOptions: UIScene.ConnectionOptions) {
+
         guard let windowScene = scene as? UIWindowScene else { return }
 
         let service = ConnectionsService()
 
         service.fetchConnections { result in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 let viewModel: RouteViewModel
 
                 switch result {
@@ -40,6 +45,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             }
         }
     }
-
 }
+
 
