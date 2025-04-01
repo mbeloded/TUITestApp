@@ -71,4 +71,34 @@ final class RouteViewModelTests: XCTestCase {
         cancellable.cancel()
     }
 
+    func test_findRoute_shouldPublishError_whenNoRouteFound() {
+        // Given
+        let mockRouteFinder = MockRouteFinder()
+        let viewModel = RouteViewModel(routeFinder: mockRouteFinder)
+
+        let berlin = City(name: "Berlin")
+        let rome = City(name: "Rome")
+
+        mockRouteFinder.mockRoute = nil // Simulate no route
+        viewModel.fromCity = berlin
+        viewModel.toCity = rome
+
+        let expectation = XCTestExpectation(description: "Error message should be published")
+        var receivedError: String?
+
+        let cancellable = viewModel.errorMessagePublisher
+            .sink { error in
+                receivedError = error
+                expectation.fulfill()
+            }
+
+        // When
+        viewModel.findRoute()
+
+        // Then
+        wait(for: [expectation], timeout: 1.0)
+        XCTAssertEqual(receivedError, "Failed to find route")
+        cancellable.cancel()
+    }
+
 }
