@@ -12,6 +12,9 @@ protocol RouteViewModelProtocol {
     var routePublisher: AnyPublisher<Route?, Never> { get }
     var errorMessagePublisher: AnyPublisher<String?, Never> { get }
 
+    var fromCity: City? { get set }
+    var toCity: City? { get set }
+    
     func findRoute()
     func loadCities()
 }
