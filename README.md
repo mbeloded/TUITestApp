@@ -9,7 +9,6 @@ An iOS app built in Swift that helps users find the most convenient and cheapest
 - Calculates the cheapest route, even when no direct flight exists
 - Displays total price of the selected route
 - Draws the selected route on a map using MapKit
-- Places pins for selected cities using geocoding
 - Built with UIKit and Combine
 - Follows SOLID principles and testable architecture
 
@@ -27,12 +26,19 @@ An iOS app built in Swift that helps users find the most convenient and cheapest
 
 ## 📦 Requirements
 
-- Xcode 15+
+- Xcode 16+
 - iOS 15+
-- Swift 5.9+
+- Swift 6+
 
 ### Covered Components:
 - `RouteViewModel` tested using `MockRouteFinder`
 - Protocols and dependency injection to decouple UI from logic
 
 See test files in `TUITestAppTests/` for reference.
+
+### Covered TDD Steps:
+- Step 1: Write failing test for loading cities  
+- Step 2: Implement code to pass the test using mock service  
+- Step 3: Add test for route-finding logic  
+- Step 4: Implement logic and pass the test  
+- Step 5: Integrate all parts and refactor 
