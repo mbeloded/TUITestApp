@@ -148,8 +148,14 @@ extension MainViewController {
 
         viewModel.errorMessagePublisher
             .sink { [weak self] error in
-                guard let error, let self else { return }
-                self.showRetryAlert(error: error.localizedDescription)
+                guard let self, let error else { return }
+
+                if case .loadingConnectionsFailed = error {
+                    self.showRetryAlert(error: error.localizedDescription)
+                } else {
+                    self.resultLabel.text = error.localizedDescription
+                }
+
                 self.mapView.removeOverlays(self.mapView.overlays)
             }
             .store(in: &subscriptions)

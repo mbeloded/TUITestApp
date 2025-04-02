@@ -36,7 +36,6 @@ protocol RouteViewModelProtocol: Sendable {
 
     func findRoute()
     func loadCities()
-    func setInitialError(_ message: String)
 }
 
 @MainActor
@@ -69,10 +68,6 @@ final class RouteViewModel: RouteViewModelProtocol {
         self.connectionsService = connectionsService
     }
 
-    func setInitialError(_ message: String) {
-       errorMessageSubject.send(.loadingConnectionsFailed(message))
-    }
-
     func loadCities() {
         connectionsService.fetchConnections { [weak self] result in
             guard let self = self else { return }
@@ -80,6 +75,10 @@ final class RouteViewModel: RouteViewModelProtocol {
             Task { @MainActor in
                 switch result {
                 case .success(let connections):
+                    guard !connections.isEmpty else {
+                        self.errorMessageSubject.send(.loadingConnectionsFailed("No available connections."))
+                        return
+                    }
                     let finder = RouteFinder(connections: connections)
                     self.routeFinder = finder
                     self.citiesSubject.send(finder.allCities)
