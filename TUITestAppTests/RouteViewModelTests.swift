@@ -9,44 +9,19 @@ import Combine
 @testable import TUITestApp
 
 final class RouteViewModelTests: XCTestCase {
-    private final class MockConnectionsService: ConnectionsFetching {
-        var mockConnections: [Connection] = []
-
-        func fetchConnections(completion: @escaping @Sendable (Result<[Connection], Error>) -> Void) {
-            completion(.success(mockConnections))
-        }
-    }
-
-    private final class MockRouteFinder: RouteFinding {
-        var mockRoute: Route?
-        var mockCities: [City] = []
-
-        var allCities: [City] {
-            mockCities
-        }
-
-        func fetchAllCities(completion: @escaping ([City]) -> Void) {
-            completion(mockCities)
-        }
-
-        func findCheapestRoute(from: City, to: City) -> Route? {
-            mockRoute
-        }
-    }
 
     private var cancellables = Set<AnyCancellable>()
 
     @MainActor
     func test_whenCitiesAreSet_shouldExposeThemViaPublisher() async {
-        let mockRouteFinder = MockRouteFinder()
+        // Given
         let mockService = MockConnectionsService()
+        let mockRouteFinder = MockRouteFinder() // no longer used for cities, just placeholder
 
         mockService.mockConnections = [
-            Connection(from: "Berlin", to: "Paris", coordinates: .init(from: .init(lat: 0, long: 0), to: .init(lat: 1, long: 1)), price: 100)
-        ]
-        mockRouteFinder.mockCities = [
-            City(name: "Berlin"),
-            City(name: "Paris")
+            Connection(from: "Berlin", to: "Paris",
+                       coordinates: .init(from: .init(lat: 0, long: 0), to: .init(lat: 1, long: 1)),
+                       price: 100)
         ]
 
         let viewModel = RouteViewModel(routeFinder: mockRouteFinder, connectionsService: mockService)
@@ -54,19 +29,23 @@ final class RouteViewModelTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Receive cities")
         var received: [City] = []
 
-        viewModel.allCitiesPublisher
-            .dropFirst() // wait for new value
+        let cancellable = viewModel.allCitiesPublisher
+            .dropFirst() // wait for update
             .sink { cities in
                 received = cities
                 expectation.fulfill()
             }
-            .store(in: &cancellables)
 
+        // When
         viewModel.loadCities()
         await fulfillment(of: [expectation], timeout: 1.0)
 
+        // Then
         XCTAssertEqual(received.count, 2)
-        XCTAssertEqual(received.map(\.name), ["Berlin", "Paris"])
+        XCTAssertTrue(received.contains { $0.name == "Berlin" })
+        XCTAssertTrue(received.contains { $0.name == "Paris" })
+
+        cancellable.cancel()
     }
 
     @MainActor
@@ -123,12 +102,12 @@ final class RouteViewModelTests: XCTestCase {
         viewModel.toCity = rome
 
         let expectation = XCTestExpectation(description: "Error published")
-        var message: String?
+        var receivedError: RouteFindingError?
 
         viewModel.errorMessagePublisher
             .dropFirst()
-            .sink {
-                message = $0
+            .sink { error in
+                receivedError = error
                 expectation.fulfill()
             }
             .store(in: &cancellables)
@@ -136,6 +115,6 @@ final class RouteViewModelTests: XCTestCase {
         viewModel.findRoute()
         await fulfillment(of: [expectation], timeout: 1.0)
 
-        XCTAssertEqual(message, "Failed to find route")
+        XCTAssertEqual(receivedError, .noRoute)
     }
 }

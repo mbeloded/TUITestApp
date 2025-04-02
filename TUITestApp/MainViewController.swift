@@ -147,10 +147,10 @@ extension MainViewController {
             .store(in: &subscriptions)
 
         viewModel.errorMessagePublisher
-            .sink { [weak self] in
-                guard let message = $0 else { return }
-                self?.showRetryAlert(error: message)
-                self?.mapView.removeOverlays(self?.mapView.overlays ?? [])
+            .sink { [weak self] error in
+                guard let error, let self else { return }
+                self.showRetryAlert(error: error.localizedDescription)
+                self.mapView.removeOverlays(self.mapView.overlays)
             }
             .store(in: &subscriptions)
     }

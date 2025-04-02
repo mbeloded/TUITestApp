@@ -25,10 +25,6 @@ final class RouteFinder: RouteFinding {
         return allNames.map { City(name: $0) }
     }
 
-    func fetchAllCities(completion: @escaping ([City]) -> Void) {
-        completion(allCities)
-    }
-
     func findCheapestRoute(from: City, to: City) -> Route? {
         var distances: [String: Int] = [:]
         var previous: [String: Connection] = [:]
