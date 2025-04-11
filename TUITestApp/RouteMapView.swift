@@ -9,7 +9,7 @@ import SwiftUI
 import MapKit
 
 struct RouteMapView: UIViewRepresentable {
-    let route: Route
+    let route: Route?
 
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView()
@@ -24,8 +24,12 @@ struct RouteMapView: UIViewRepresentable {
         mapView.removeOverlays(mapView.overlays)
         mapView.removeAnnotations(mapView.annotations)
 
-        let coordinates = route.connections.map(\.coordinates.from.coordinate) +
-                          [route.connections.last!.coordinates.to.coordinate]
+        guard let route = route else { return }
+
+        let fromCoordinates = route.connections.map { $0.coordinates.from.coordinate }
+        guard let toCoordinate = route.connections.last?.coordinates.to.coordinate else { return }
+
+        let coordinates = fromCoordinates + [toCoordinate]
 
         let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
         mapView.addOverlay(polyline)
@@ -39,7 +43,11 @@ struct RouteMapView: UIViewRepresentable {
         // Zoom to fit the entire route
         if !coordinates.isEmpty {
             let polylineRect = polyline.boundingMapRect
-            mapView.setVisibleMapRect(polylineRect, edgePadding: UIEdgeInsets(top: 40, left: 40, bottom: 40, right: 40), animated: true)
+            mapView.setVisibleMapRect(
+                polylineRect,
+                edgePadding: UIEdgeInsets(top: 40, left: 40, bottom: 40, right: 40),
+                animated: true
+            )
         }
     }
 

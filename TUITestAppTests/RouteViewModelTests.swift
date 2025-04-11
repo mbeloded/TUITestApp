@@ -29,12 +29,13 @@ final class RouteViewModelTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Receive cities")
         var received: [City] = []
 
-        let cancellable = viewModel.allCitiesPublisher
-            .dropFirst() // wait for update
-            .sink { cities in
-                received = cities
-                expectation.fulfill()
-            }
+        viewModel.$allCities
+           .dropFirst()
+           .sink { cities in
+               received = cities
+               expectation.fulfill()
+           }
+           .store(in: &cancellables)
 
         // When
         viewModel.loadCities()
@@ -45,7 +46,6 @@ final class RouteViewModelTests: XCTestCase {
         XCTAssertTrue(received.contains { $0.name == "Berlin" })
         XCTAssertTrue(received.contains { $0.name == "Paris" })
 
-        cancellable.cancel()
     }
 
     @MainActor
@@ -73,7 +73,7 @@ final class RouteViewModelTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Route published")
         var result: Route?
 
-        viewModel.routePublisher
+        viewModel.$route
             .dropFirst()
             .sink {
                 result = $0
@@ -104,7 +104,7 @@ final class RouteViewModelTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Error published")
         var receivedError: RouteFindingError?
 
-        viewModel.errorMessagePublisher
+        viewModel.$errorMessage
             .dropFirst()
             .sink { error in
                 receivedError = error
