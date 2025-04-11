@@ -34,6 +34,8 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				MainViewController.swift,
+				"Utilities/MapView+Delegate.swift",
 			);
 			target = DE7B898D2D9C36740087181F /* TUITestApp */;
 		};

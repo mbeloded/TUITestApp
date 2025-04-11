@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 enum RouteFindingError: LocalizedError, Equatable {
     case noRoute
@@ -26,10 +27,10 @@ enum RouteFindingError: LocalizedError, Equatable {
 }
 
 @MainActor
-protocol RouteViewModelProtocol: Sendable {
-    var allCitiesPublisher: AnyPublisher<[City], Never> { get }
-    var routePublisher: AnyPublisher<Route?, Never> { get }
-    var errorMessagePublisher: AnyPublisher<RouteFindingError?, Never> { get }
+protocol RouteViewModelProtocol: ObservableObject, Sendable {
+    var allCities: [City] { get }
+    var route: Route? { get }
+    var errorMessage: RouteFindingError? { get }
 
     var fromCity: City? { get set }
     var toCity: City? { get set }
@@ -44,24 +45,12 @@ final class RouteViewModel: RouteViewModelProtocol {
     private var routeFinder: RouteFinding
     private let connectionsService: ConnectionsFetching
 
-    private let citiesSubject = CurrentValueSubject<[City], Never>([])
-    private let routeSubject = CurrentValueSubject<Route?, Never>(nil)
-    private let errorMessageSubject = CurrentValueSubject<RouteFindingError?, Never>(nil)
+    @Published private(set) var allCities: [City] = []
+    @Published private(set) var route: Route?
+    @Published private(set) var errorMessage: RouteFindingError?
 
-    var fromCity: City?
-    var toCity: City?
-
-    var allCitiesPublisher: AnyPublisher<[City], Never> {
-        citiesSubject.eraseToAnyPublisher()
-    }
-
-    var routePublisher: AnyPublisher<Route?, Never> {
-        routeSubject.eraseToAnyPublisher()
-    }
-
-    var errorMessagePublisher: AnyPublisher<RouteFindingError?, Never> {
-        errorMessageSubject.eraseToAnyPublisher()
-    }
+    @Published var fromCity: City?
+    @Published var toCity: City?
 
     init(routeFinder: RouteFinding = RouteFinder(connections: []), connectionsService: ConnectionsFetching) {
         self.routeFinder = routeFinder
@@ -70,21 +59,21 @@ final class RouteViewModel: RouteViewModelProtocol {
 
     func loadCities() {
         connectionsService.fetchConnections { [weak self] result in
-            guard let self = self else { return }
+            guard let self else { return }
 
             Task { @MainActor in
                 switch result {
                 case .success(let connections):
                     guard !connections.isEmpty else {
-                        self.errorMessageSubject.send(.loadingConnectionsFailed("No available connections."))
+                        self.errorMessage = .loadingConnectionsFailed("No available connections.")
                         return
                     }
                     let finder = RouteFinder(connections: connections)
                     self.routeFinder = finder
-                    self.citiesSubject.send(finder.allCities)
+                    self.allCities = connections.allUniqueCities()
 
                 case .failure(let error):
-                    self.errorMessageSubject.send(.loadingConnectionsFailed(error.localizedDescription))
+                    self.errorMessage = .loadingConnectionsFailed(error.localizedDescription)
                 }
             }
         }
@@ -92,14 +81,14 @@ final class RouteViewModel: RouteViewModelProtocol {
 
     func findRoute() {
         guard let fromCity, let toCity else {
-            errorMessageSubject.send(.invalidCities)
+            errorMessage = .invalidCities
             return
         }
 
         if let route = routeFinder.findCheapestRoute(from: fromCity, to: toCity) {
-            routeSubject.send(route)
+            self.route = route
         } else {
-            errorMessageSubject.send(.noRoute)
+            self.errorMessage = .noRoute
         }
     }
 }

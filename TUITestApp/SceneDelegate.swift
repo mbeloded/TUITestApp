@@ -5,7 +5,7 @@
 //  Created by Michael Bielodied on 01.04.2025.
 //
 
-import UIKit
+import SwiftUI
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
@@ -19,10 +19,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         let service = ConnectionsService()
         let viewModel = RouteViewModel(connectionsService: service)
-        let mainVC = MainViewController(viewModel: viewModel)
-
+        let contentView = MainView(viewModel: viewModel)
+        
         let window = UIWindow(windowScene: windowScene)
-        window.rootViewController = mainVC
+        window.rootViewController = UIHostingController(rootView: contentView)
         self.window = window
         window.makeKeyAndVisible()
     }
