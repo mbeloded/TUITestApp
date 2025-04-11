@@ -36,9 +36,10 @@ struct RouteMapView: UIViewRepresentable {
             mapView.addAnnotation(annotation)
         }
 
-        if let first = coordinates.first {
-            let region = MKCoordinateRegion(center: first, span: .init(latitudeDelta: 10, longitudeDelta: 10))
-            mapView.setRegion(region, animated: true)
+        // Zoom to fit the entire route
+        if !coordinates.isEmpty {
+            let polylineRect = polyline.boundingMapRect
+            mapView.setVisibleMapRect(polylineRect, edgePadding: UIEdgeInsets(top: 40, left: 40, bottom: 40, right: 40), animated: true)
         }
     }
 
