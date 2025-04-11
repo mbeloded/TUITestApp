@@ -14,6 +14,7 @@ struct MainView<ViewModel: RouteViewModelProtocol>: View {
     @State private var toInput: String = ""
     @State private var showSuggestions = false
     @State private var showAlert = false
+    @State private var activeTextField: ActiveField?
     @State private var region = MKCoordinateRegion(
        center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
        span: MKCoordinateSpan(latitudeDelta: 10, longitudeDelta: 10)
@@ -28,20 +29,40 @@ struct MainView<ViewModel: RouteViewModelProtocol>: View {
             VStack(spacing: 16) {
                 TextField("From", text: $fromInput)
                     .textFieldStyle(.roundedBorder)
-                    .onChange(of: fromInput) { _, _ in
+                    .submitLabel(.next)
+                    .onTapGesture {
+                        activeTextField = .from
                         showSuggestions = true
+                    }
+                    .onChange(of: fromInput) { _, _ in
+                        activeTextField = .from
+                        showSuggestions = true
+                    }
+                    .onSubmit {
+                        showSuggestions = false
+                        activeTextField = .to
                     }
 
                 TextField("To", text: $toInput)
                     .textFieldStyle(.roundedBorder)
-                    .onChange(of: toInput) { _, _ in
+                    .submitLabel(.done)
+                    .onTapGesture {
+                        activeTextField = .to
                         showSuggestions = true
+                    }
+                    .onChange(of: toInput) { _, _ in
+                        activeTextField = .to
+                        showSuggestions = true
+                    }
+                    .onSubmit {
+                        showSuggestions = false
                     }
 
                 Button("Find Cheapest Route") {
                     viewModel.fromCity = viewModel.allCities.first { $0.name.caseInsensitiveCompare(fromInput) == .orderedSame }
                     viewModel.toCity = viewModel.allCities.first { $0.name.caseInsensitiveCompare(toInput) == .orderedSame }
                     viewModel.findRoute()
+                    showSuggestions = false
                 }
                 .buttonStyle(.borderedProminent)
 
@@ -50,17 +71,23 @@ struct MainView<ViewModel: RouteViewModelProtocol>: View {
                 }
 
                 if showSuggestions {
-                    List(filteredCities, id: \ .name) { city in
-                        Button(city.name) {
-                            if fromInput.isEmpty {
+                    List(filteredCities, id: \.name) { city in
+                        Button(action: {
+                            switch activeTextField {
+                            case .from:
                                 fromInput = city.name
-                            } else {
+                            case .to:
                                 toInput = city.name
+                            case .none:
+                                break
                             }
                             showSuggestions = false
+                        }) {
+                            Text(city.name)
                         }
                     }
-                    .frame(height: 150)
+                    .listStyle(.plain)
+                    .frame(height: 350)
                 }
 
                 if let route = viewModel.route {
@@ -93,7 +120,15 @@ struct MainView<ViewModel: RouteViewModelProtocol>: View {
     }
 
     private var filteredCities: [City] {
-        let query = fromInput.isEmpty ? toInput : fromInput
+        let query: String
+        switch activeTextField {
+        case .from:
+            query = fromInput
+        case .to:
+            query = toInput
+        case .none:
+            query = ""
+        }
         return viewModel.allCities.filter { $0.name.lowercased().contains(query.lowercased()) }
     }
 
