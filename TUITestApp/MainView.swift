@@ -98,7 +98,7 @@ struct MainView<ViewModel: RouteViewModelProtocol>: View {
                     VStack(spacing: 0) {
                         if activeTextField == .from || activeTextField == .to {
                             List(filteredCities, id: \.name) { city in
-                                Button(city.name) {
+                                Button(action: {
                                     switch activeTextField {
                                     case .from:
                                         fromInput = city.name
@@ -107,7 +107,13 @@ struct MainView<ViewModel: RouteViewModelProtocol>: View {
                                     case .none:
                                         break
                                     }
-                                    showSuggestions = false
+
+                                    DispatchQueue.main.async {
+                                        showSuggestions = false
+                                    }
+                                }) {
+                                    Text(city.name)
+                                        .accessibilityIdentifier(city.name)
                                 }
                             }
                             .frame(height: 150)
