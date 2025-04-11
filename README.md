@@ -1,6 +1,6 @@
 # TUITestApp
 
-An iOS app built in Swift that helps users find the most convenient and cheapest flight route between two cities.
+An iOS app built in Swift and SwiftUI that helps users find the most convenient and cheapest flight route between two cities.
 
 ## ✈️ Features
 
@@ -9,18 +9,18 @@ An iOS app built in Swift that helps users find the most convenient and cheapest
 - Calculates the cheapest route, even when no direct flight exists
 - Displays total price of the selected route
 - Draws the selected route on a map using MapKit
-- Built with UIKit and Combine
+- Built with SwiftUI and Combine
 - Follows SOLID principles and testable architecture
 
 ## 🧪 Tests
 
 - Includes unit tests (with XCTest)
-- UI tests for validating user interactions
+- UI tests for validating user interactions using XCUIApplication
 
 ## 🚀 Getting Started
 
 1. Clone the repo
-2. Open `TUITestProject.xcodeproj` in Xcode
+2. Open `TUITestApp.xcodeproj` in Xcode
 3. Run the app on simulator or device
 4. Make sure to add the remote JSON URL to `Info.plist` under the key `ConnectionsDataURL`
 
